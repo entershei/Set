@@ -13,11 +13,11 @@ namespace my_Set {
     template<typename T>
     struct set;
 
-    /*template<typename R>
+    template<typename R>
     void swap(set<R> &a, set<R> &b) noexcept {
         std::swap(a.end_fake, b.end_fake);
         std::swap(a.root, b.root);
-    }*/
+    }
 
     template<typename T>
     struct set {
@@ -31,18 +31,35 @@ namespace my_Set {
             explicit node(T const &x) : left(nullptr), right(nullptr), parent(nullptr), x(x) {}
 
             explicit node() : left(nullptr), right(nullptr), parent(nullptr), x() {}
+
+            bool less (node const &other) const {
+                if (not x && not other.x) {
+                    assert("less two not create obj");
+                    return false;
+                } else if (x && not other.x) {
+                    return true;
+                } else if (not x && other.x) {
+                    return false;
+                } else {
+                    return x.value() < other.x.value();
+                }
+            }
         };
 
+        mutable node end_fake;
         node *root;
         node *start;
-        node end_fake;
     public:
-        template<typename V>
-        struct iterator_set : public std::iterator<std::bidirectional_iterator_tag, V> {
+        struct iterator_set {
+            using iterator_category = std::bidirectional_iterator_tag;
+            using value_type = T;
+            using difference_type = int;
+            using pointer = node *;
+            using reference = value_type const &;
+
             friend set;
 
-            template<typename W>
-            explicit iterator_set(const iterator_set<W> &other) {
+            iterator_set(const iterator_set &other) {
                 it = other.it;
             }
 
@@ -54,7 +71,7 @@ namespace my_Set {
                         it = it->left;
                     }
                 } else {
-                    while (it->parent && (it->parent->x < it->x)) {
+                    while (it->parent && (it->parent->less(*it))) {
                         it = it->parent;
                     }
 
@@ -80,7 +97,7 @@ namespace my_Set {
                         it = it->right;
                     }
                 } else {
-                    while (it->parent && (it->x < it->parent->x)) {
+                    while (it->parent && (it->less(*it->parent))) {
                         it = it->parent;
                     }
 
@@ -98,8 +115,8 @@ namespace my_Set {
                 return in;
             }
 
-            V const &operator*() const {
-                return it->x;
+            T const &operator*() const {
+                return it->x.value();
             }
 
             bool operator!=(const iterator_set &other) const {
@@ -110,26 +127,21 @@ namespace my_Set {
                 return it == other.it;
             }
 
-        private:
-            iterator_set(node *it) : it(it) {}
+        //todo private:
+        explicit iterator_set(node *it) : it(it) {}
 
-            node *get() {
-                return it;
-            }
-
-            node *it;
+            pointer it;
         };
 
-        using iterator = iterator_set<T>;
+        using iterator = iterator_set;
         using const_iterator = iterator;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-        set() noexcept : root(&end_fake), end_fake{} {
+        set() noexcept : end_fake{}, root(&end_fake), start(&end_fake) {
             end_fake.left = &end_fake;
             end_fake.right = &end_fake;
             end_fake.parent = &end_fake;
-            start = &end_fake;
         }
 
         const_iterator copy_dfs(const_iterator v) {
@@ -177,8 +189,11 @@ namespace my_Set {
         }
 
         void dfs_with_delete(node *v) {
-            if (!v->left && !v->right) {
-                delete v;
+            if ((not v->left || v->left == &end_fake) && (!v->right || v->right == &end_fake)) {
+                if (v != &end_fake) {
+                    delete v;
+                }
+
                 return;
             }
 
@@ -186,17 +201,19 @@ namespace my_Set {
                 dfs_with_delete(v->left);
             }
 
-            if (v->right) {
+            if (v->right && v->right != &end_fake) {
                 dfs_with_delete(v->right);
             }
         }
 
         void clear() {
-            dfs_with_delete(root);
+            if (not empty()) {
+                dfs_with_delete(root);
+            }
         }
 
         bool empty() const noexcept {
-            return start != &end_fake;
+            return start == &end_fake;
         }
 
         const_iterator help_lower_bound(node *v, T const &value) const noexcept {
@@ -205,12 +222,12 @@ namespace my_Set {
             }
 
             if (v->x > value) {
-                help_lower_bound(v->left, value);
+                return help_lower_bound(v->left, value);
             } else {
                 if (v->right == nullptr) {
                     return ++(iterator(v));
                 } else {
-                    help_lower_bound(v->right, value);
+                    return help_lower_bound(v->right, value);
                 }
             }
         }
@@ -242,19 +259,15 @@ namespace my_Set {
             }
         }
 
-        iterator erase(const_iterator pos) {
+        iterator erase(const_iterator pos) noexcept {
             assert(pos != end() && "can't erase end element");
 
-            bool flag_delete_root = (pos == root);
-            iterator ret;
+            bool flag_delete_root = (pos.it == root);
+            iterator ret = std::next(pos);;
 
             if (not pos.it->left && not pos.it->right) {
-                ret = pos.it->parent;
-
                 delete pos.it;
             } else {
-                ret = std::next(pos);
-
                 pos.it->x = ret.it->x;
                 ret.it->parent->left = ret.it->right;
                 ret.it->right->parent = ret.it->parent->left;
@@ -265,30 +278,48 @@ namespace my_Set {
             }
 
             if (flag_delete_root) {
-                root = *ret;
+                root = &(*ret.it);
             }
 
             return ret;
         }
 
-        std::pair<iterator, bool> insert(T const& v) {
-            if (find(v) != end()) {
+        std::pair<iterator, bool> insert(T const& value) {
+            const_iterator fd = find(value);
+            if (*fd == value) {
                 return {end(), false};
             }
 
+            node *ret = new node(value);
 
+            if (fd == begin()) {
+                start = ret;
+            }
+
+            ret->left = fd.it->left;
+            fd.it->left = ret;
+
+            return {iterator(ret), true};
         }
 
         const_iterator end() const {
-            return iterator(&end_fake);
+            return const_iterator(&end_fake);
         }
 
         const_iterator begin() const {
-            return start;
+            return iterator(start);
         }
 
-        //template <typename R>
-        //friend void swap(set<R> &a, set<R> &b);
+        const_reverse_iterator rbegin() const {
+            return reverse_iterator(end());
+        }
+
+        const_reverse_iterator rend() const {
+            return reverse_iterator(begin());
+        }
+
+        template <typename R>
+        friend void swap(set<R> &a, set<R> &b) noexcept;
     };
 }
 
