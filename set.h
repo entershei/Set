@@ -15,8 +15,7 @@ namespace my_Set {
 
     template<typename R>
     void swap(set<R> &a, set<R> &b) noexcept {
-        std::swap(a.end_fake, b.end_fake);
-        std::swap(a.root, b.root);
+        a.swap(b);
     }
 
     template<typename T>
@@ -188,10 +187,16 @@ namespace my_Set {
             clear();
         }
 
-        void swap(set const &rhs) {
+        void swap(set &rhs) {
             std::swap(root, rhs.root);
-            std::swap(end_fake, rhs.end_fake);
             std::swap(start, rhs.start);
+
+            if (root != &rhs.end_fake) {
+                end_fake.parent->right = &rhs.end_fake;
+            }
+            if (rhs.root != &rhs.end_fake) {
+                rhs.end_fake.parent->right = &end_fake;
+            }
         }
 
         void dfs_with_delete(node *v) {
@@ -211,7 +216,9 @@ namespace my_Set {
                 dfs_with_delete(v->right);
             }
 
-            delete v;
+            if (v != &end_fake) {
+                delete v;
+            }
         }
 
         void clear() {
@@ -220,6 +227,7 @@ namespace my_Set {
 
                 root = &end_fake;
                 start = &end_fake;
+                end_fake.parent = nullptr;
             }
         }
 
