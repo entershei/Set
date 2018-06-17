@@ -44,6 +44,11 @@ void expect_reverse_eq(C const &c, std::initializer_list<T> elems) {
     expect_eq(c.rbegin(), c.rend(), elems);
 }
 
+TEST(correctness, simple_order_first) {
+    set<int> s;
+    s.insert(3);
+}
+
 TEST(correctness, simple_order) {
     set<int> s;
     std::vector<int> res = {10, 3, 1};
@@ -712,4 +717,9 @@ TEST(correctness, no_def_constructor) {
     s.insert(dummy(1));
 
     ASSERT_EQ(1, (*s.begin()).x);
+}
+
+int main(int ac, char **av) {
+    testing::InitGoogleTest(&ac, av);
+    return RUN_ALL_TESTS();
 }

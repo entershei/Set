@@ -109,7 +109,7 @@ namespace my_Set {
                 return *this;
             };
 
-            const iterator_set operator--(int) {
+            iterator_set operator--(int) {
                 iterator_set in(it);
                 --(*this);
                 return in;
@@ -117,6 +117,10 @@ namespace my_Set {
 
             T const &operator*() const {
                 return it->x.value();
+            }
+
+            T const &operator->() const {
+                return *(operator*());
             }
 
             bool operator!=(const iterator_set &other) const {
@@ -127,8 +131,12 @@ namespace my_Set {
                 return it == other.it;
             }
 
+            iterator_set() : it(nullptr) {}
+
         //todo private:
-        explicit iterator_set(node *it) : it(it) {}
+            explicit iterator_set(node *it) : it(it) {}
+
+            node* get_node() { return it; }
 
             pointer it;
         };
@@ -139,18 +147,12 @@ namespace my_Set {
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
         set() noexcept : end_fake{}, root(&end_fake), start(&end_fake) {
-            end_fake.left = &end_fake;
-            end_fake.right = &end_fake;
-            end_fake.parent = &end_fake;
+            end_fake.left = nullptr;
+            end_fake.right = nullptr;
+            end_fake.parent = nullptr;
         }
 
         const_iterator copy_dfs(const_iterator v) {
-            if (not *v->left && not *v->right) {
-                node *ret = new node(v.it->x);
-                ret->left = ret->right = nullptr;
-                return iterator(ret);
-            }
-
             node *ret = new node(v.it->x);
 
             if (*v->left) {
@@ -165,12 +167,16 @@ namespace my_Set {
                 ret->left = cur_r.it;
             }
 
-            return ret;
+            return iterator(ret);
         }
 
         set(set const &other) : set() {
-            root = *copy_dfs(iterator(other.root));
+            root = copy_dfs(iterator(other.root)).get_node();
+
             start = root;
+            while (start->left) {
+                start = start->left;
+            }
         }
 
         set &operator=(set rhs) {
@@ -197,7 +203,7 @@ namespace my_Set {
                 return;
             }
 
-            if (v->left) {
+            if (v->left && v != &end_fake) {
                 dfs_with_delete(v->left);
             }
 
@@ -252,7 +258,7 @@ namespace my_Set {
         const_iterator find(T const &value) const noexcept {
             const_iterator lower = lower_bound(value);
 
-            if (*lower == value) {
+            if (lower != end() && *lower == value) {
                 return lower;
             } else {
                 return end();
@@ -286,7 +292,7 @@ namespace my_Set {
 
         std::pair<iterator, bool> insert(T const& value) {
             const_iterator fd = find(value);
-            if (*fd == value) {
+            if (fd != end() && *fd == value) {
                 return {end(), false};
             }
 
