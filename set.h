@@ -210,11 +210,16 @@ namespace my_Set {
             if (v->right && v->right != &end_fake) {
                 dfs_with_delete(v->right);
             }
+
+            delete v;
         }
 
         void clear() {
             if (not empty()) {
                 dfs_with_delete(root);
+
+                root = &end_fake;
+                start = &end_fake;
             }
         }
 
