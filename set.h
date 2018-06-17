@@ -10,13 +10,14 @@
 #include <experimental/optional>
 
 namespace my_Set {
+    template<typename T>
     struct set;
 
-    template<typename T>
-    void swap(set<T> &a, set<T> &b) noexcept {
+    /*template<typename R>
+    void swap(set<R> &a, set<R> &b) noexcept {
         std::swap(a.end_fake, b.end_fake);
         std::swap(a.root, b.root);
-    }
+    }*/
 
     template<typename T>
     struct set {
@@ -41,7 +42,7 @@ namespace my_Set {
             friend set;
 
             template<typename W>
-            iterator_set(const iterator_set<W> &other) : {
+            explicit iterator_set(const iterator_set<W> &other) {
                 it = other.it;
             }
 
@@ -109,7 +110,7 @@ namespace my_Set {
                 return it == other.it;
             }
 
-            // todo private:
+        private:
             iterator_set(node *it) : it(it) {}
 
             node *get() {
@@ -198,28 +199,32 @@ namespace my_Set {
             return start != &end_fake;
         }
 
-        const_iterator lower_bound(node *v = root, T const &value) const noexcept {
-            if (empty()) { return end(); }
-
+        const_iterator help_lower_bound(node *v, T const &value) const noexcept {
             if (v->x == value || (v->left == nullptr && v->x > value)) {
                 return iterator(v);
             }
 
             if (v->x > value) {
-                lower_bound(v->left);
+                help_lower_bound(v->left, value);
             } else {
                 if (v->right == nullptr) {
                     return ++(iterator(v));
                 } else {
-                    lower_bound(v->right, value);
+                    help_lower_bound(v->right, value);
                 }
             }
         }
 
-        const_iterator upper_bound(node *v = root, T const &value) const noexcept {
+        const_iterator lower_bound(T const &value) const noexcept {
             if (empty()) { return end(); }
 
-            const_iterator lower = lower_bound(v, value);
+            return help_lower_bound(root, value);
+        }
+
+        const_iterator upper_bound(T const &value) const noexcept {
+            if (empty()) { return end(); }
+
+            const_iterator lower = help_lower_bound(root, value);
             if (*lower == value) {
                 ++lower;
             }
@@ -228,7 +233,7 @@ namespace my_Set {
         }
 
         const_iterator find(T const &value) const noexcept {
-            const_iterator lower = lower_bound(root, value);
+            const_iterator lower = lower_bound(value);
 
             if (*lower == value) {
                 return lower;
@@ -282,7 +287,8 @@ namespace my_Set {
             return start;
         }
 
-        friend void swap(set &a, set &b);
+        //template <typename R>
+        //friend void swap(set<R> &a, set<R> &b);
     };
 }
 

@@ -3,14 +3,11 @@ project(Set)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_executable(Set main.cpp set.h)
-add_executable(Set_testing
-        main.cpp
-        set.h
-        test/test.cpp)
+add_executable(Set_testing set.h main.cpp)
+add_library(Set SHARED set.h)
+set_target_properties(Set PROPERTIES LINKER_LANGUAGE CXX)
 
-target_link_libraries(Set_testing  gtest -lpthread)
-
+add_executable(Set_my_testing set.h main2.cpp main2.cpp)
 
 if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -D_GLIBCXX_DEBUG -fsanitize=address,undefined")
@@ -19,3 +16,4 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -march=native")
     set(CMAKE_CXX_OUTPUT_EXTENSION_REPLACE ON)
 endif ()
+target_link_libraries(Set_testing Set gtest -lpthread)
